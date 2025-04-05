@@ -1,0 +1,3 @@
+-- vim.api.nvim_create_user_command('Scratchy', function(opts)
+--   require('scratchpad').open_scratchpad(opts.args)
+-- end, { nargs = 1 })
