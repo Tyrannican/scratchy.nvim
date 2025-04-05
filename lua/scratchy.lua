@@ -8,6 +8,10 @@ local M = {}
 ---@class scratchpad.State
 ---@field float table<string, number>: Float window and buffer
 
+---@class scratchpad.ExecuteOpts
+---@field bufnr number: Buffer containing the scratchpad text
+---@field language string: Language of the buffer
+
 M.create_runner = function(program)
   local runner
   if program == 'python3' or program == 'node' then
@@ -79,8 +83,6 @@ local defaults = {
     width = math.floor(vim.o.columns * 0.5),
     row = 10,
     col = 20,
-    -- row = vim.o.lines - math.floor(vim.o.lines * 0.7),
-    -- col = vim.o.columns - math.floor(vim.o.columns * 0.65),
     zindex = 1,
     title = "Output",
     title_pos = "center"
@@ -133,27 +135,20 @@ M.open_scratchpad = function(language)
     )
   end
 
-  -- XXX: Temporary Keybinds
-  vim.keymap.set('n', '<leader><leader>o', function()
-    local float = create_floating_window(options.window_config, true)
-    vim.bo[float.buf].filetype = language
-    vim.api.nvim_win_set_config(float.win, { title = language .. ' scratchpad', title_pos = 'center' })
-    state.float = float
-  end)
+  local float = create_floating_window(options.window_config, true)
+  vim.bo[float.buf].filetype = language
+  vim.api.nvim_win_set_config(float.win, { title = language .. ' scratchpad', title_pos = 'center' })
+  state.float = float
 
-  vim.keymap.set('n', '<leader><leader>q', function()
+  vim.keymap.set('n', '<leader><leader>sq', function()
     pcall(vim.api.nvim_win_close, state.float.win, true)
     state.float = {}
   end)
 
-  vim.keymap.set('n', '<leader><leader>r', function()
+  vim.keymap.set('n', '<leader><leader>sr', function()
     M.execute({ bufnr = state.float.buf, language = language })
   end)
 end
-
----@class scratchpad.ExecuteOpts
----@field bufnr number: Buffer containing the scratchpad text
----@field language string: Language of the buffer
 
 --- Executes the code in the currently open scratchpad
 --- Depending on the language, will execute a different runner
@@ -161,7 +156,7 @@ end
 M.execute = function(opts)
   local runner = options.runners[opts.language]
   local input = vim.api.nvim_buf_get_lines(opts.bufnr, 0, -1, false)
-  local output = runner(input);
+  local output = runner(input)
   local float = create_floating_window(options.result_config, true)
   vim.api.nvim_buf_set_lines(float.buf, 0, -1, false, output)
   vim.api.nvim_create_autocmd('BufLeave', {
@@ -171,9 +166,5 @@ M.execute = function(opts)
     end
   })
 end
-
--- TODO: Move this to arguments or something
-M.setup()
-M.open_scratchpad('javascript')
 
 return M
