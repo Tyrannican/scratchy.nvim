@@ -1,5 +1,7 @@
 local M = {}
 
+local runners = require 'scratchy.runner'
+
 ---@class scratchpad.Options
 ---@field window_config vim.api.keyset.win_config: The configuration for the floating window
 ---@fiels result_config vim.api.keyset.win_config: The configuration for the program output window
@@ -12,57 +14,11 @@ local M = {}
 ---@field bufnr number: Buffer containing the scratchpad text
 ---@field language string: Language of the buffer
 
-M.create_runner = function(program)
-  local runner
-  if program == 'python3' or program == 'node' then
-    runner = function(code)
-      local infile = vim.fn.tempname()
-      vim.fn.writefile(code, infile)
-      local result = vim.system({ program, infile }, { text = true }):wait()
-      return vim.split(result.stdout, "\n")
-    end
-  elseif program == 'rust' then
-    runner = function(code)
-      local infile = vim.fn.tempname() .. ".rs"
-      local outfile = infile:sub(1, -4)
-      vim.fn.writefile(code, infile)
-      local result = vim.system({ "rustc", infile, "-o", outfile }, { text = true }):wait()
-      if result.code ~= 0 then
-        return vim.split(result.stderr, "\n")
-      end
 
-      result = vim.system({ outfile }, { text = true }):wait()
-      return vim.split(result.stdout, "\n")
-    end
-  elseif program == 'lua' then
-    runner = function(code)
-      local og_print = print
-      local output = {}
-      print = function(...)
-        local args = { ... }
-        local message = table.concat(vim.tbl_map(tostring, args), "\t")
-        table.insert(output, message)
-      end
-
-      local luablock = loadstring(vim.fn.join(code, "\n"))
-      pcall(function()
-        if not luablock then
-          table.insert(output, "Invalid Lua Code")
-        else
-          luablock()
-        end
-      end)
-
-      print = og_print
-
-      return output
-    end
-  else
-    print("Invalid runner provided!!")
-  end
-
-  return runner
-end
+---@type scratchpad.State
+local state = {
+  float = {}
+}
 
 ---@type scratchpad.Options
 local defaults = {
@@ -88,10 +44,10 @@ local defaults = {
     title_pos = "center"
   },
   runners = {
-    rust = M.create_runner 'rust',
-    javascript = M.create_runner 'node',
-    python = M.create_runner 'python3',
-    lua = M.create_runner 'lua'
+    rust = runners.rust_runner(),
+    javascript = runners.generic_runner 'node',
+    python = runners.generic_runner 'python3',
+    lua = runners.lua_runner()
   }
 }
 
@@ -100,11 +56,6 @@ local options = {
   window_config = {},
   result_config = {},
   runners = {}
-}
-
----@type scratchpad.State
-local state = {
-  float = {}
 }
 
 ---@param config vim.api.keyset.win_config: The configuration for the floating window
