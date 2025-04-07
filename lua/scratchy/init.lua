@@ -4,7 +4,7 @@ local runners = require 'scratchy.runner'
 
 ---@class scratchpad.Options
 ---@field window_config vim.api.keyset.win_config: The configuration for the floating window
----@fiels result_config vim.api.keyset.win_config: The configuration for the program output window
+---@field result_config vim.api.keyset.win_config: The configuration for the program output window
 ---@field runners table<string, function>: The runners to execute the code for languages
 
 ---@class scratchpad.State
